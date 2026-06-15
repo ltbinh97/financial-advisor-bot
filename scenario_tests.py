@@ -251,6 +251,18 @@ last = db.get_last_transaction(u)
 check("M7 last = most recently entered (not earliest ts)",
       last and float(last["amount"]) == 420440, str(dict(last)) if last else None)
 
+# ============================================================ N. WELCOME (new user)
+u = newuser()
+r = run(u, "chào")
+check("N1 new user gets welcome", "Chào mừng" in joined(r), joined(r)[:60])
+r2 = run(u, "lịch sử")
+check("N2 returning user NOT re-welcomed", "Chào mừng" not in joined(r2), joined(r2)[:60])
+u3 = newuser()
+r3 = run(u3, "ăn trưa 50k")
+check("N3 new user + transaction: welcomed AND recorded",
+      "Chào mừng" in joined(r3) and any(float(t["amount"]) == 50000 for t in txs(u3)),
+      joined(r3)[:60])
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)

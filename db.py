@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS settings (
     monthly_income NUMERIC(16,2),
     report_freq    TEXT NOT NULL DEFAULT 'weekly'
 );
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS welcomed BOOLEAN NOT NULL DEFAULT FALSE;
 """
 
 
@@ -277,6 +278,18 @@ def set_monthly_income(user_id, amount):
     _q("""INSERT INTO settings (user_id, monthly_income) VALUES (%s,%s)
           ON CONFLICT (user_id) DO UPDATE SET monthly_income=EXCLUDED.monthly_income""",
        (user_id, amount))
+
+
+def mark_welcomed_if_new(user_id) -> bool:
+    """Atomically mark a user as welcomed. Returns True only the FIRST time
+    (new user, or an existing user not yet welcomed) — so the welcome fires once."""
+    row = _q(
+        """INSERT INTO settings (user_id, welcomed) VALUES (%s, TRUE)
+           ON CONFLICT (user_id) DO UPDATE SET welcomed = TRUE
+           WHERE settings.welcomed = FALSE
+           RETURNING user_id""",
+        (user_id,), fetch="one")
+    return row is not None
 
 
 def list_active_users():

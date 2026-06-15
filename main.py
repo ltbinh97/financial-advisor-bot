@@ -30,6 +30,22 @@ from config import CATEGORIES, CATEGORY_LABELS
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("pfm.main")
 
+WELCOME_TEXT = (
+    "👋 *Chào mừng bạn đến với Trợ lý Tài chính Cá nhân!*\n\n"
+    "Mình giúp bạn ghi chép thu chi, lập ngân sách, đặt mục tiêu tiết kiệm và xem báo cáo — "
+    "chỉ bằng cách nhắn tin tự nhiên.\n\n"
+    "*Bắt đầu trong 5 bước (thử ngay):*\n"
+    "1️⃣ `thu nhập hàng tháng 20tr` — khai báo thu nhập\n"
+    "2️⃣ `ngân sách ăn uống 3tr` — đặt hạn mức & bật cảnh báo\n"
+    "3️⃣ `ăn trưa 50k` — ghi một khoản chi (hoặc gửi *ảnh hóa đơn*)\n"
+    "4️⃣ `mục tiêu mua xe 50tr` — đặt mục tiêu tiết kiệm\n"
+    "5️⃣ `báo cáo tháng này` — xem tổng kết & dự báo\n\n"
+    "Gõ `help` bất cứ lúc nào để xem đầy đủ tính năng. Cùng bắt đầu nhé! 💪"
+)
+
+GREETINGS = {"hi", "hello", "hey", "alo", "chào", "xin chào", "chào bot", "chào bạn",
+             "start", "/start", "bắt đầu", "hí", "helu"}
+
 HELP_TEXT = (
     "👋 Mình là *trợ lý tài chính cá nhân*. Bạn có thể:\n\n"
     "• *Ghi giao dịch*: \"ăn trưa 50k\", \"lương 15tr\", hoặc dán SMS ngân hàng\n"
@@ -275,9 +291,21 @@ def _handle_question(chat_id, text):
 
 # --- Message processing ---------------------------------------------------
 
+def _welcome_if_new(chat_id, user_id) -> bool:
+    """Send the welcome message the first time a user contacts the bot."""
+    if db.mark_welcomed_if_new(user_id):
+        zalo.send_text(chat_id, WELCOME_TEXT)
+        return True
+    return False
+
+
 def process_text(chat_id, text):
     user_id = chat_id
     try:
+        welcomed = _welcome_if_new(chat_id, user_id)
+        # If their very first message is just a greeting/help, the welcome covers it.
+        if welcomed and (_norm(text) in GREETINGS or _fast_intent(text) == "help"):
+            return
         fast = _fast_intent(text)
         if fast == "help":
             return zalo.send_text(chat_id, HELP_TEXT)
@@ -366,6 +394,7 @@ def _extract_image_url(message: dict):
 def process_image(chat_id, image_url):
     user_id = chat_id
     try:
+        _welcome_if_new(chat_id, user_id)
         logger.info("OCR start url=%s", (image_url or "")[:120])
         draft = ingestion.parse_receipt_image(image_url)
         logger.info("OCR result=%s", draft)
