@@ -40,6 +40,7 @@ HELP_TEXT = (
     "• *Thu nhập*: \"thu nhập hàng tháng 20tr\"\n"
     "• *Báo cáo*: \"báo cáo\" — xem tổng kết + dự báo\n"
     "• *Xem*: \"ngân sách của tôi\", \"mục tiêu của tôi\", \"hóa đơn định kỳ\", \"dự báo\"\n"
+    "• *Xóa nhầm*: \"xóa giao dịch gần nhất\" / \"hủy giao dịch\"\n"
     "• Hoặc hỏi bất kỳ điều gì về tài chính cá nhân.\n\n"
     "Mọi cảnh báo/khuyến nghị đều kèm *vì sao – dựa trên dữ liệu nào – ảnh hưởng gì*."
 )
@@ -55,6 +56,13 @@ def _fast_intent(text: str):
     t = _norm(text)
     if t in ("help", "menu", "/help", "/start", "start", "trợ giúp", "tro giup", "hướng dẫn", "huong dan", "bắt đầu"):
         return "help"
+    # Undo / delete a transaction — checked before "recent" to avoid the
+    # "giao dịch gần" overlap in "xóa giao dịch gần nhất".
+    if ("hoàn tác" in t or "undo" in t or
+            (any(x in t for x in ("xóa", "xoá", "hủy", "huỷ"))
+             and any(y in t for y in ("giao dịch", "giao dich", "khoản", "khoan",
+                                       "gần nhất", "gan nhat", "vừa nhập", "vua nhap", "cuối", "cuoi")))):
+        return "undo"
     if any(k in t for k in ("báo cáo", "bao cao", "report", "tổng kết", "tong ket")):
         return "report_month" if any(k in t for k in ("tháng", "thang", "month")) else "report"
     if any(k in t for k in ("ngân sách của tôi", "ngan sach cua toi", "xem ngân sách", "xem ngan sach")):
@@ -226,6 +234,23 @@ def _handle_forecast(chat_id, user_id):
     zalo.send_text(chat_id, f"🔮 *Dự báo chi tháng:* {fmt_vnd(fc['projected_month'])}\n{render(expl)}")
 
 
+def _handle_undo(chat_id, user_id):
+    tx = db.get_last_transaction(user_id)
+    if not tx:
+        zalo.send_text(chat_id, "Không có giao dịch nào để xóa.")
+        return
+    db.delete_transaction(user_id, tx["id"])
+    lab = CATEGORY_LABELS.get(tx["category"], tx["category"])
+    sign = "＋" if tx["type"] == "income" else "－"
+    when = tx["ts"].strftime("%d/%m") if tx.get("ts") else ""
+    zalo.send_text(
+        chat_id,
+        f"🗑️ Đã xóa giao dịch gần nhất: {sign}{fmt_vnd(tx['amount'])} · {lab}"
+        + (f" · {tx['merchant']}" if tx.get("merchant") else "")
+        + (f" ({when})" if when else "")
+        + "\n_Số dư/ngân sách đã được cập nhật lại._")
+
+
 def _handle_recent(chat_id, user_id):
     txs = db.list_transactions(user_id, limit=10)
     if not txs:
@@ -270,6 +295,8 @@ def process_text(chat_id, text):
             return _handle_forecast(chat_id, user_id)
         if fast == "recent":
             return _handle_recent(chat_id, user_id)
+        if fast == "undo":
+            return _handle_undo(chat_id, user_id)
 
         # Bank SMS fast path before generic classification.
         if ingestion.looks_like_bank_sms(text):

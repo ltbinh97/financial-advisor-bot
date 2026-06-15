@@ -184,6 +184,17 @@ def list_transactions(user_id, since=None, limit=200):
               (user_id, limit), fetch="all")
 
 
+def get_last_transaction(user_id):
+    return _q("SELECT * FROM transactions WHERE user_id=%s ORDER BY ts DESC, id DESC LIMIT 1",
+              (user_id,), fetch="one")
+
+
+def delete_transaction(user_id, tx_id):
+    """Delete one transaction owned by the user. Returns the deleted id or None."""
+    return _q("DELETE FROM transactions WHERE id=%s AND user_id=%s RETURNING id",
+              (tx_id, user_id), fetch="one")
+
+
 def category_totals(user_id, since, ttype="expense"):
     """Sum amount per category since a timestamp."""
     rows = _q(

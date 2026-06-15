@@ -116,6 +116,9 @@ mục tiêu của tôi              → xem tiến độ (vd 10%)
 | `dự báo` | Dự báo tổng chi cả tháng theo nhịp hiện tại |
 | `hóa đơn định kỳ` | Các khoản lặp lại hàng tháng bot phát hiện |
 | `lịch sử` | 10 giao dịch gần nhất |
+| `xóa giao dịch gần nhất` / `hủy giao dịch` / `hoàn tác` | Xóa giao dịch vừa ghi (nếu nhập nhầm) |
+
+> 🗑️ **Xóa nhầm?** Gõ `xóa giao dịch gần nhất` (hoặc `hủy giao dịch`, `hoàn tác`) — bot xóa khoản mới nhất và cập nhật lại số dư/ngân sách. Giao dịch nhập tay trùng nhau vẫn được giữ; chỉ ảnh hóa đơn/SMS gửi lại y hệt mới bị tự bỏ qua.
 
 ---
 
@@ -160,6 +163,7 @@ ngân sách của tôi            → xem ngân sách
 mục tiêu của tôi             → xem mục tiêu
 hóa đơn định kỳ / dự báo     → phân tích
 lịch sử                      → giao dịch gần đây
+xóa giao dịch gần nhất       → xóa khoản vừa ghi (hoặc: hủy giao dịch / hoàn tác)
 ```
 
 Chúc bạn quản lý tài chính hiệu quả! 💪

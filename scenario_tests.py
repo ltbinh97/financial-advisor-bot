@@ -225,6 +225,23 @@ SENT.clear(); main._record_and_react(u2, u2, {"amount": 50000, "type": "expense"
 check("L4 manual duplicates allowed (not deduped)",
       len([t for t in txs(u2) if float(t["amount"]) == 50000]) == 2, "")
 
+# ============================================================ M. UNDO / DELETE
+u = newuser()
+db.add_transaction(u, 75000, "expense", category="an_uong", source="seed")
+db.add_transaction(u, 30000, "expense", category="an_uong", source="seed")
+before = len(txs(u))
+r = run(u, "xóa giao dịch gần nhất")
+check("M1 undo deletes one tx", len(txs(u)) == before - 1, f"{before}->{len(txs(u))}")
+check("M2 undo confirms deletion", "đã xóa" in joined(r).lower(), joined(r)[:100])
+u2 = newuser()
+r = run(u2, "hủy giao dịch")
+check("M3 undo with no tx -> friendly msg", "không có" in joined(r).lower(), joined(r)[:80])
+check("M4 'xóa giao dịch gần nhất' routes to undo (not recent)",
+      main._fast_intent("xóa giao dịch gần nhất") == "undo", str(main._fast_intent("xóa giao dịch gần nhất")))
+check("M5 'lịch sử' still routes to recent",
+      main._fast_intent("lịch sử") == "recent", str(main._fast_intent("lịch sử")))
+check("M6 'hoàn tác' routes to undo", main._fast_intent("hoàn tác") == "undo", "")
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)
