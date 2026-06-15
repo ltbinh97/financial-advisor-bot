@@ -241,6 +241,15 @@ check("M4 'xóa giao dịch gần nhất' routes to undo (not recent)",
 check("M5 'lịch sử' still routes to recent",
       main._fast_intent("lịch sử") == "recent", str(main._fast_intent("lịch sử")))
 check("M6 'hoàn tác' routes to undo", main._fast_intent("hoàn tác") == "undo", "")
+# Entered order, not business date: income (ts=now) first, then OCR receipt with a
+# PAST date entered last -> undo must target the OCR receipt (entered most recently).
+u = newuser()
+db.add_transaction(u, 20000000, "income", category="thu_nhap", source="manual")
+db.add_transaction(u, 420440, "expense", merchant="Shopee", category="mua_sam",
+                   source="ocr", ts=_dt(2026, 6, 14))
+last = db.get_last_transaction(u)
+check("M7 last = most recently entered (not earliest ts)",
+      last and float(last["amount"]) == 420440, str(dict(last)) if last else None)
 
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")

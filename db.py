@@ -178,14 +178,16 @@ def find_duplicate(user_id, amount, ttype, merchant, ts=None):
 def list_transactions(user_id, since=None, limit=200):
     if since:
         return _q(
-            "SELECT * FROM transactions WHERE user_id=%s AND ts>=%s ORDER BY ts DESC LIMIT %s",
+            "SELECT * FROM transactions WHERE user_id=%s AND ts>=%s ORDER BY id DESC LIMIT %s",
             (user_id, since, limit), fetch="all")
-    return _q("SELECT * FROM transactions WHERE user_id=%s ORDER BY ts DESC LIMIT %s",
+    return _q("SELECT * FROM transactions WHERE user_id=%s ORDER BY id DESC LIMIT %s",
               (user_id, limit), fetch="all")
 
 
 def get_last_transaction(user_id):
-    return _q("SELECT * FROM transactions WHERE user_id=%s ORDER BY ts DESC, id DESC LIMIT 1",
+    # "gần nhất" = most recently ENTERED (insertion order = id), not the business
+    # date (ts) — an OCR receipt can carry a past date but be entered just now.
+    return _q("SELECT * FROM transactions WHERE user_id=%s ORDER BY id DESC LIMIT 1",
               (user_id,), fetch="one")
 
 
