@@ -202,6 +202,29 @@ check("J5 empty payload skipped", "skipped" in hres({"foo": "bar"}), "")
 parts = channel_zalo.split_message("A" * 5000)
 check("K1 long message split <=2000", len(parts) >= 3 and all(len(p) <= 2000 for p in parts), f"{len(parts)} parts")
 
+# ============================================================ L. DEDUP (OCR/SMS)
+from datetime import datetime as _dt
+u = newuser()
+ocr = {"amount": 420440, "type": "expense", "merchant": "Shopee", "note": "OCR",
+       "ts": _dt(2026, 6, 14), "source": "ocr", "raw": "img-A"}
+SENT.clear(); main._record_and_react(u, u, dict(ocr))
+SENT.clear(); main._record_and_react(u, u, dict(ocr))  # resend same receipt
+dup_msg = joined([b.get("text", "") for m, b in SENT if m == "sendMessage"])
+check("L1 duplicate OCR not re-recorded",
+      len([t for t in txs(u) if float(t["amount"]) == 420440]) == 1,
+      f"count={len([t for t in txs(u) if float(t['amount'])==420440])}")
+check("L2 duplicate informs user", "trùng" in dup_msg.lower(), dup_msg[:100])
+SENT.clear(); main._record_and_react(u, u, {"amount": 99000, "type": "expense",
+              "merchant": "Shopee", "ts": _dt(2026, 6, 14), "source": "ocr", "raw": "img-B"})
+check("L3 different amount still records", any(float(t["amount"]) == 99000 for t in txs(u)), "")
+u2 = newuser()
+SENT.clear(); main._record_and_react(u2, u2, {"amount": 50000, "type": "expense",
+              "merchant": "cafe", "ts": None, "source": "manual", "raw": "a"})
+SENT.clear(); main._record_and_react(u2, u2, {"amount": 50000, "type": "expense",
+              "merchant": "cafe", "ts": None, "source": "manual", "raw": "b"})
+check("L4 manual duplicates allowed (not deduped)",
+      len([t for t in txs(u2) if float(t["amount"]) == 50000]) == 2, "")
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)

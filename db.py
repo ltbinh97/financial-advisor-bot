@@ -153,6 +153,28 @@ def add_transaction(user_id, amount, ttype, merchant=None, category="khac",
     return row
 
 
+def find_duplicate(user_id, amount, ttype, merchant, ts=None):
+    """Find a likely-duplicate transaction: same user/amount/type/merchant on the
+    same calendar day (when a date is known) or within the last 24h otherwise.
+    Used to suppress re-ingested receipts/bank SMS."""
+    if ts is not None:
+        return _q(
+            """SELECT id, ts, source FROM transactions
+               WHERE user_id=%s AND type=%s AND amount=%s
+                 AND COALESCE(lower(merchant),'')=COALESCE(lower(%s),'')
+                 AND DATE(ts)=DATE(%s)
+               ORDER BY ts DESC LIMIT 1""",
+            (user_id, ttype, amount, merchant, ts), fetch="one")
+    since = datetime.utcnow() - timedelta(hours=24)
+    return _q(
+        """SELECT id, ts, source FROM transactions
+           WHERE user_id=%s AND type=%s AND amount=%s
+             AND COALESCE(lower(merchant),'')=COALESCE(lower(%s),'')
+             AND ts>=%s
+           ORDER BY ts DESC LIMIT 1""",
+        (user_id, ttype, amount, merchant, since), fetch="one")
+
+
 def list_transactions(user_id, since=None, limit=200):
     if since:
         return _q(

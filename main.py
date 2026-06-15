@@ -104,6 +104,21 @@ def classify(text: str) -> dict:
 # --- Handlers -------------------------------------------------------------
 
 def _record_and_react(chat_id, user_id, draft):
+    # Duplicate guard for automated ingestion (OCR receipts, bank SMS): re-sending
+    # the same receipt/notification should not create a second transaction.
+    if draft.get("source") in ("ocr", "bank_sms"):
+        dup = db.find_duplicate(user_id, draft["amount"], draft["type"],
+                                draft.get("merchant"), draft.get("ts"))
+        if dup:
+            when = dup["ts"].strftime("%d/%m") if dup.get("ts") else "trước đó"
+            zalo.send_text(
+                chat_id,
+                f"⚠️ Giao dịch này trùng với khoản đã ghi ({fmt_vnd(draft['amount'])}"
+                + (f" · {draft['merchant']}" if draft.get("merchant") else "")
+                + f", ngày {when}). Đã bỏ qua để tránh trùng lặp.\n"
+                + "_Nếu là khoản khác, hãy nhập tay kèm ghi chú để phân biệt._")
+            return
+
     category = intel.categorize(draft)
     anomaly = intel.detect_anomaly(user_id, draft["amount"], category) if draft["type"] == "expense" else None
     tx = db.add_transaction(
