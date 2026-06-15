@@ -291,10 +291,42 @@ def process_text(chat_id, text):
         zalo.send_text(chat_id, "Xin lỗi, có lỗi khi xử lý. Bạn thử lại nhé.")
 
 
+def _extract_image_url(message: dict):
+    """Find an image/attachment URL in a Zalo message payload (shape varies)."""
+    # Direct string fields.
+    for k in ("url", "photo", "image_url", "photo_url", "thumb", "href", "link"):
+        v = message.get(k)
+        if isinstance(v, str) and v.startswith("http"):
+            return v
+    # Nested object fields.
+    for k in ("image", "photo", "attachment", "file", "media"):
+        v = message.get(k)
+        if isinstance(v, dict):
+            for kk in ("url", "href", "link", "payload", "thumb"):
+                u = v.get(kk)
+                if isinstance(u, str) and u.startswith("http"):
+                    return u
+    # List of attachments.
+    for k in ("attachments", "photos", "images", "media"):
+        v = message.get(k)
+        if isinstance(v, list) and v:
+            first = v[0]
+            if isinstance(first, str) and first.startswith("http"):
+                return first
+            if isinstance(first, dict):
+                for kk in ("url", "href", "link", "payload"):
+                    u = first.get(kk)
+                    if isinstance(u, str) and u.startswith("http"):
+                        return u
+    return None
+
+
 def process_image(chat_id, image_url):
     user_id = chat_id
     try:
+        logger.info("OCR start url=%s", (image_url or "")[:120])
         draft = ingestion.parse_receipt_image(image_url)
+        logger.info("OCR result=%s", draft)
         if not draft:
             return zalo.send_text(chat_id, "Mình chưa đọc được hóa đơn. Bạn chụp rõ tổng tiền hơn nhé, "
                                            "hoặc nhập tay: \"siêu thị 250k\".")
@@ -336,7 +368,7 @@ def handler(payload: dict, context: RequestContext) -> dict:
         threading.Thread(target=run_cron, args=(kind,), daemon=True).start()
         return {"ok": True, "cron": kind}
 
-    event = payload.get("event_name")
+    event = payload.get("event_name") or ""
     message = payload.get("message") or {}
     sender = message.get("from") or {}
     chat_id = (message.get("chat") or {}).get("id")
@@ -350,13 +382,16 @@ def handler(payload: dict, context: RequestContext) -> dict:
             threading.Thread(target=process_text, args=(chat_id, text), daemon=True).start()
         return {"ok": True}
 
-    # Image/receipt events (event name varies: image/photo).
-    if event and ("image" in event or "photo" in event):
-        image_url = message.get("url") or message.get("photo") or (message.get("image") or {}).get("url")
+    # Diagnostic: log the shape of non-text events so we learn Zalo's payload format.
+    logger.info("non-text event=%s message_keys=%s", event, list(message.keys()))
+
+    # Image / receipt / attachment events -> OCR (stickers excluded).
+    if "sticker" not in event:
+        image_url = _extract_image_url(message)
         if image_url:
             zalo.typing(chat_id)
             threading.Thread(target=process_image, args=(chat_id, image_url), daemon=True).start()
-        return {"ok": True}
+            return {"ok": True, "ocr": True}
 
     return {"ok": True, "skipped": event or "no_event"}
 
