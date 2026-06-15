@@ -88,7 +88,11 @@ _CLASSIFY_SYS = (
     "Ví dụ: 'lương 20tr' -> {\"intent\":\"transaction\",\"type\":\"income\",\"amount\":20000000}. "
     "'thu nhập hàng tháng 20tr' -> {\"intent\":\"set_income\",\"amount\":20000000}. "
     "'thưởng tết 5tr' -> {\"intent\":\"transaction\",\"type\":\"income\",\"amount\":5000000}. "
-    "'ăn trưa 50k' -> {\"intent\":\"transaction\",\"type\":\"expense\",\"amount\":50000}."
+    "'ăn trưa 50k' -> {\"intent\":\"transaction\",\"type\":\"expense\",\"amount\":50000}.\n"
+    "add_to_goal khi bỏ/góp/tiết kiệm tiền CHO một mục tiêu đã có. "
+    "'tiết kiệm cho mua xe 5tr' -> {\"intent\":\"add_to_goal\",\"goal_name\":\"mua xe\",\"amount\":5000000}. "
+    "'bỏ ống 2tr cho quỹ du lịch' -> {\"intent\":\"add_to_goal\",\"goal_name\":\"du lịch\",\"amount\":2000000}. "
+    "'mục tiêu mua nhà 1 tỷ' -> {\"intent\":\"set_goal\",\"goal_name\":\"mua nhà\",\"amount\":1000000000}."
 )
 
 

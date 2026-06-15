@@ -14,9 +14,9 @@ logger = logging.getLogger("pfm.intel")
 # Fast keyword rules; LLM is only used as a fallback for unknown merchants.
 _RULES = {
     "an_uong": ["ăn", "an ", "cơm", "com", "cà phê", "ca phe", "coffee", "trà sữa", "quán", "nhà hàng", "food", "grabfood", "lunch", "lẩu", "phở", "bún"],
-    "di_chuyen": ["xăng", "xang", "grab", "taxi", "xe", "bus", "vé", "gửi xe", "parking", "be ", "gojek", "tàu", "máy bay", "vé máy bay"],
+    "di_chuyen": ["xăng", "xang", "grab", "taxi", "xe máy", "xe buýt", "ô tô", "gửi xe", "bus", "vé xe", "parking", "gojek", "tàu", "máy bay", "vé máy bay", "đi lại"],
     "hoa_don_tien_ich": ["điện", "dien", "nước", "nuoc", "internet", "wifi", "hóa đơn", "hoa don", "evn", "tiền điện", "data", "4g", "cước"],
-    "mua_sam": ["mua", "shopee", "lazada", "tiki", "siêu thị", "sieu thi", "quần áo", "shop", "mall", "đồ"],
+    "mua_sam": ["shopee", "lazada", "tiki", "siêu thị", "sieu thi", "quần áo", "mua áo", "mua giày", "mua đồ", "shop", "mall"],
     "giai_tri": ["phim", "netflix", "spotify", "game", "karaoke", "du lịch", "bar", "nhậu", "giải trí"],
     "suc_khoe": ["thuốc", "thuoc", "bệnh viện", "benh vien", "khám", "bác sĩ", "nha khoa", "gym", "phòng khám"],
     "giao_duc": ["học", "hoc ", "khóa học", "sách", "sach", "course", "udemy", "học phí"],
