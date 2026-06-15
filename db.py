@@ -75,7 +75,13 @@ def init_db() -> None:
     if _pool is None:
         if not config.DATABASE_URL:
             raise RuntimeError("DATABASE_URL is not configured")
-        _pool = ThreadedConnectionPool(1, 8, dsn=config.DATABASE_URL)
+        # keepalives keep idle connections alive against serverless Postgres
+        # (Neon) which drops idle SSL connections.
+        _pool = ThreadedConnectionPool(
+            1, 8, dsn=config.DATABASE_URL,
+            keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5,
+            connect_timeout=10,
+        )
         logger.info("DB pool created")
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -88,23 +94,40 @@ def init_db() -> None:
 def get_conn():
     assert _pool is not None, "init_db() must be called first"
     conn = _pool.getconn()
+    broken = False
     try:
         yield conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        # Stale/closed connection (e.g. Neon dropped it) — drop it from the pool.
+        broken = True
+        raise
     finally:
-        _pool.putconn(conn)
+        try:
+            _pool.putconn(conn, close=broken)
+        except Exception:
+            logger.warning("putconn failed", exc_info=True)
 
 
-def _q(sql: str, params=(), fetch: str | None = None):
-    with get_conn() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            out = None
-            if fetch == "one":
-                out = cur.fetchone()
-            elif fetch == "all":
-                out = cur.fetchall()
-        conn.commit()
-    return out
+def _q(sql: str, params=(), fetch: str | None = None, _retries: int = 3):
+    """Run a query, retrying with a fresh connection if a pooled one is stale."""
+    last_err = None
+    for attempt in range(_retries):
+        try:
+            with get_conn() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(sql, params)
+                    out = None
+                    if fetch == "one":
+                        out = cur.fetchone()
+                    elif fetch == "all":
+                        out = cur.fetchall()
+                conn.commit()
+            return out
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+            last_err = e
+            logger.warning("DB op failed (attempt %d/%d), retrying with fresh connection: %s",
+                           attempt + 1, _retries, e)
+    raise last_err
 
 
 def ping() -> bool:
