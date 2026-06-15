@@ -56,7 +56,7 @@ def _fast_intent(text: str):
     if t in ("help", "menu", "/help", "/start", "start", "trợ giúp", "tro giup", "hướng dẫn", "huong dan", "bắt đầu"):
         return "help"
     if any(k in t for k in ("báo cáo", "bao cao", "report", "tổng kết", "tong ket")):
-        return "report"
+        return "report_month" if any(k in t for k in ("tháng", "thang", "month")) else "report"
     if any(k in t for k in ("ngân sách của tôi", "ngan sach cua toi", "xem ngân sách", "xem ngan sach")):
         return "view_budgets"
     if any(k in t for k in ("mục tiêu của tôi", "muc tieu cua toi", "xem mục tiêu", "xem muc tieu")):
@@ -79,8 +79,16 @@ _CLASSIFY_SYS = (
     "\"amount\": number|null, \"category\": string|null, \"goal_name\": string|null, "
     "\"type\": \"income|expense|null\", \"merchant\": string|null}. "
     "set_budget: đặt hạn mức chi cho 1 danh mục. set_goal: tạo mục tiêu tiết kiệm. "
-    "set_income: khai báo thu nhập hàng tháng. add_to_goal: bỏ tiền vào mục tiêu. "
-    "transaction: một khoản thu/chi đã xảy ra. question: hỏi tư vấn, không có giao dịch."
+    "add_to_goal: bỏ tiền vào mục tiêu. question: hỏi tư vấn, không có giao dịch. "
+    "QUAN TRỌNG — phân biệt set_income vs transaction:\n"
+    "- set_income CHỈ khi có cụm 'hàng tháng'/'mỗi tháng'/'thu nhập hàng tháng' "
+    "(khai báo mức thu nhập cố định, KHÔNG phải tiền vừa nhận).\n"
+    "- transaction(type=income) khi là một khoản tiền VỪA nhận: lương, thưởng, được trả, "
+    "hoàn tiền... (kể cả 'lương 20tr' không kèm 'hàng tháng').\n"
+    "Ví dụ: 'lương 20tr' -> {\"intent\":\"transaction\",\"type\":\"income\",\"amount\":20000000}. "
+    "'thu nhập hàng tháng 20tr' -> {\"intent\":\"set_income\",\"amount\":20000000}. "
+    "'thưởng tết 5tr' -> {\"intent\":\"transaction\",\"type\":\"income\",\"amount\":5000000}. "
+    "'ăn trưa 50k' -> {\"intent\":\"transaction\",\"type\":\"expense\",\"amount\":50000}."
 )
 
 
@@ -231,6 +239,8 @@ def process_text(chat_id, text):
             return zalo.send_text(chat_id, HELP_TEXT)
         if fast == "report":
             return zalo.send_text(chat_id, reports.build_report(user_id, 7))
+        if fast == "report_month":
+            return zalo.send_text(chat_id, reports.build_report(user_id, month=True))
         if fast == "view_budgets":
             return _handle_view_budgets(chat_id, user_id)
         if fast == "view_goals":

@@ -13,8 +13,14 @@ from config import CATEGORY_LABELS
 logger = logging.getLogger("pfm.report")
 
 
-def build_report(user_id: str, period_days: int = 7) -> str:
-    since = datetime.utcnow() - timedelta(days=period_days)
+def build_report(user_id: str, period_days: int = 7, month: bool = False) -> str:
+    now = datetime.utcnow()
+    if month:
+        since = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        period_label = "tháng này"
+    else:
+        since = now - timedelta(days=period_days)
+        period_label = "tuần" if period_days <= 7 else f"{period_days} ngày"
     income = db.total_amount(user_id, since, "income")
     expense = db.total_amount(user_id, since, "expense")
     net = income - expense
@@ -23,9 +29,11 @@ def build_report(user_id: str, period_days: int = 7) -> str:
     goals = db.list_goals(user_id)
     fc = intel.forecast_month_expense(user_id)
 
-    label = "tuần" if period_days <= 7 else f"{period_days} ngày"
-    L = [f"📊 *Báo cáo tài chính {label}*", ""]
+    L = [f"📊 *Báo cáo tài chính {period_label}*", ""]
     L.append(f"• Thu: {fmt_vnd(income)}  |  Chi: {fmt_vnd(expense)}  |  Ròng: {fmt_vnd(net)}")
+    st = db.get_settings(user_id)
+    if st and st.get("monthly_income"):
+        L.append(f"• Thu nhập khai báo: {fmt_vnd(st['monthly_income'])}/tháng")
 
     if cats:
         L.append("\n*Top chi tiêu:*")
