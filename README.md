@@ -6,6 +6,8 @@ lưu dữ liệu ở **PostgreSQL**, dùng **LLM GreenNode AI Platform**.
 Theo dõi thu/chi, phân loại giao dịch, lập ngân sách, đặt mục tiêu tiết kiệm, cảnh báo đa tầng
 và báo cáo định kỳ — mọi khuyến nghị đều kèm *vì sao / dựa trên dữ liệu nào / ảnh hưởng gì*.
 
+📖 **Hướng dẫn cho người dùng cuối:** [docs/HUONG_DAN_SU_DUNG.md](docs/HUONG_DAN_SU_DUNG.md)
+
 ## Kiến trúc 4 lớp
 
 | Lớp | Module | Nhiệm vụ |
