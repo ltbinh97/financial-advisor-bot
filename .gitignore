@@ -1,0 +1,22 @@
+# Secrets / credentials — NEVER commit
+.env
+.env.*
+!.env.example
+.greennode.json
+*.credentials.json
+
+# Runtime/tool state & caches
+.agentbase/
+.agentbase-state.json
+
+# Claude Code local settings (records raw commands incl. secrets) — never commit
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
