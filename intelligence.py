@@ -128,8 +128,8 @@ def overspend_risk(user_id: str) -> list:
         usage = spent / budget_amt if budget_amt else 0
         proj_usage = projected / budget_amt if budget_amt else 0
         risks.append({
-            "category": cat, "budget": round(budget_amt), "spent": round(spent),
-            "usage": round(usage, 2), "projected": round(projected),
+            "category": cat, "label": b.get("label"), "budget": round(budget_amt),
+            "spent": round(spent), "usage": round(usage, 2), "projected": round(projected),
             "projected_usage": round(proj_usage, 2),
         })
     return sorted(risks, key=lambda x: -x["projected_usage"])

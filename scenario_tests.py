@@ -333,6 +333,21 @@ r = run(u, "8")
 check("R5 '8' -> full feature list", "ghi giao dịch" in joined(r).lower() or "trợ lý" in joined(r).lower(), joined(r)[:80])
 check("R6 non-menu text not hijacked", main._menu_pick("ăn trưa 50k") is None, "")
 
+# ============================================================ S. CUSTOM ZBB ALLOCATION
+check("S1 slug strips Vietnamese", main._slug("Tiền sữa") == "tien_sua" and main._slug("Mua vàng") == "mua_vang", "")
+check("S2 allocate routing",
+      main._fast_intent("phân bổ: tiền nhà 5tr, sữa 1tr, còn lại tiết kiệm") == "allocate", "")
+u = newuser()
+db.set_monthly_income(u, 20000000)
+SENT.clear()
+main._handle_allocate(u, u, "phân bổ: tiền nhà 5tr, ăn uống 4tr, sữa 1tr, điện nước 800k, du lịch 2tr, còn lại để tiết kiệm")
+budgets = db.get_budgets(u)
+total = sum(float(b["amount"]) for b in budgets)
+labels = " ".join((b.get("label") or "").lower() for b in budgets)
+check("S3 allocations sum EXACTLY to income (zero-based)", total == 20000000, f"total={total}")
+check("S4 custom envelope kept (sữa/du lịch)", "sữa" in labels or "du lịch" in labels, labels)
+check("S5 remainder swept to savings", "tiết kiệm" in labels or "tiet kiem" in labels, labels)
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)

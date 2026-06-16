@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS settings (
     report_freq    TEXT NOT NULL DEFAULT 'weekly'
 );
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS welcomed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE budgets ADD COLUMN IF NOT EXISTS label TEXT;
 """
 
 
@@ -241,12 +242,18 @@ def category_avg_30d(user_id, category):
 
 # --- Budgets --------------------------------------------------------------
 
-def set_budget(user_id, category, amount, period="monthly"):
-    _q("""INSERT INTO budgets (user_id, category, period, amount)
-          VALUES (%s,%s,%s,%s)
+def set_budget(user_id, category, amount, period="monthly", label=None):
+    _q("""INSERT INTO budgets (user_id, category, period, amount, label)
+          VALUES (%s,%s,%s,%s,%s)
           ON CONFLICT (user_id, category, period)
-          DO UPDATE SET amount=EXCLUDED.amount""",
-       (user_id, category, period, amount))
+          DO UPDATE SET amount=EXCLUDED.amount,
+                        label=COALESCE(EXCLUDED.label, budgets.label)""",
+       (user_id, category, period, amount, label))
+
+
+def clear_budgets(user_id, period="monthly"):
+    """Remove all allocation lines — used to rebuild a zero-based plan from scratch."""
+    _q("DELETE FROM budgets WHERE user_id=%s AND period=%s", (user_id, period))
 
 
 def get_budgets(user_id, period="monthly"):

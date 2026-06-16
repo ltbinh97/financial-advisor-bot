@@ -12,7 +12,9 @@ Platform hard requirements: listen on :8080 and serve GET /health.
 """
 
 import logging
+import re
 import threading
+import unicodedata
 
 from greennode_agentbase import GreenNodeAgentBaseApp, RequestContext, PingStatus
 
@@ -52,7 +54,8 @@ HELP_TEXT = (
     "• *Gửi ảnh hóa đơn* → mình tự đọc (OCR) và ghi nhận\n"
     "• *Dán CSV* (date,amount,type,merchant) để nhập hàng loạt\n"
     "• *Ngân sách*: \"ngân sách ăn uống 3tr\"\n"
-    "• *Ngân sách từ số 0 (ZBB)*: \"phân bổ tự động\" / \"ngân sách zbb\" — giao việc cho mọi đồng thu nhập\n"
+    "• *Ngân sách từ số 0 (ZBB)*: \"phân bổ tự động\", hoặc tự liệt kê — "
+    "\"phân bổ: tiền nhà 5tr, sữa 1tr, du lịch 2tr, còn lại để tiết kiệm\" (phần dư tự dồn vào tiết kiệm)\n"
     "• *Mục tiêu*: \"mục tiêu mua xe 50tr\"\n"
     "• *Lộ trình tiết kiệm*: \"tôi muốn có 2 tỷ để mua nhà, bao lâu thì đạt?\"\n"
     "• *Thu nhập*: \"thu nhập hàng tháng 20tr\"\n"
@@ -122,6 +125,10 @@ def _fast_intent(text: str):
     if any(k in t for k in ("phân bổ tự động", "tự động phân bổ", "gợi ý ngân sách",
                             "gợi ý phân bổ", "tu dong phan bo", "phan bo tu dong")):
         return "zbb_auto"
+    # Custom multi-line allocation: "phân bổ: tiền nhà 5tr, sữa 1tr, còn lại tiết kiệm"
+    if (re.search(r"\d", t) and ("," in t or "còn lại" in t or "con lai" in t)
+            and any(k in t for k in ("phân bổ", "phan bo", "chia thu nhập", "chia tiền", "lập ngân sách"))):
+        return "allocate"
     if any(k in t for k in ("ngân sách zbb", "zero-based", "zero based", "ngân sách từ số 0",
                             "ngân sách từ con số 0", "ngan sach tu so 0", "zbb",
                             "phân bổ ngân sách", "chưa phân bổ", "lập ngân sách từ")):
@@ -243,6 +250,60 @@ ZBB_TEMPLATE = [
 ]
 
 
+def _slug(s: str) -> str:
+    """Vietnamese-safe slug for a custom envelope key."""
+    s = (s or "").lower().replace("đ", "d")
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    return s or "khac"
+
+
+def _disp_label(category, label=None):
+    return label or CATEGORY_LABELS.get(category, category)
+
+
+def _handle_allocate(chat_id, user_id, text):
+    """Custom zero-based allocation: parse free-form lines into envelopes and
+    sweep the remainder into a savings/gold bucket so the plan sums to income."""
+    st = db.get_settings(user_id)
+    income = float(st["monthly_income"]) if st and st.get("monthly_income") else 0.0
+    if income <= 0:
+        zalo.send_text(chat_id, "Lập ngân sách từ số 0 cần *thu nhập* trước. "
+                                "Gõ \"thu nhập hàng tháng 20tr\", rồi liệt kê các khoản.")
+        return
+    res = llm.chat_json(
+        "Phân tích kế hoạch phân bổ ngân sách hàng tháng. Quy ước tiền k=1.000, "
+        "tr/triệu=1.000.000, tỷ=1e9. Trả JSON: "
+        "{\"items\":[{\"label\":string,\"amount\":number}],\"remainder_to\":string|null}. "
+        "label ngắn gọn, viết hoa chữ đầu (vd 'Tiền nhà','Tiền sữa','Du lịch','Điện nước'). "
+        "remainder_to = nơi nhận phần CÒN LẠI nếu người dùng nói 'còn lại để/dành cho …' "
+        "(vd 'Tiết kiệm','Mua vàng'); nếu không nói thì null.",
+        text, max_tokens=500)
+    items = [it for it in (res or {}).get("items", [])
+             if it.get("label") and float(it.get("amount") or 0) > 0]
+    if not items:
+        zalo.send_text(chat_id, "Bạn liệt kê các khoản kèm số tiền, vd:\n"
+                                "\"phân bổ: tiền nhà 5tr, ăn uống 4tr, sữa 1tr, điện nước 800k, "
+                                "du lịch 2tr, còn lại để tiết kiệm\".")
+        return
+    db.clear_budgets(user_id)  # rebuild the plan from zero
+    total = 0.0
+    for it in items:
+        amt = float(it["amount"]); total += amt
+        db.set_budget(user_id, _slug(it["label"]), amt, label=it["label"].strip())
+    remainder = income - total
+    note = ""
+    if remainder > 0:
+        target = (res.get("remainder_to") or "").strip() or "Tiết kiệm/Đầu tư"
+        db.set_budget(user_id, _slug(target), remainder, label=target)
+        note = f"\n💰 Phần còn lại {fmt_vnd(remainder)} → *{target}*."
+    elif remainder < 0:
+        note = f"\n🔴 Tổng phân bổ vượt thu nhập {fmt_vnd(-remainder)} — hãy giảm bớt một khoản."
+    zalo.send_text(chat_id, f"✅ Đã phân bổ {len(items)} khoản theo Zero-based.{note}")
+    _handle_zbb_status(chat_id, user_id)
+
+
 def _zbb_numbers(user_id):
     """Return (income, allocated, unallocated, budgets) for the month."""
     st = db.get_settings(user_id)
@@ -262,7 +323,7 @@ def _handle_zbb_status(chat_id, user_id):
     if budgets:
         L.append("*Đã phân bổ (mỗi đồng một nhiệm vụ):*")
         for b in sorted(budgets, key=lambda x: -float(x["amount"])):
-            L.append(f"  • {CATEGORY_LABELS.get(b['category'], b['category'])}: {fmt_vnd(b['amount'])}")
+            L.append(f"  • {_disp_label(b['category'], b.get('label'))}: {fmt_vnd(b['amount'])}")
         L.append(f"\nTổng phân bổ: {fmt_vnd(allocated)}")
     else:
         L.append("_Chưa phân bổ nhóm nào._")
@@ -287,6 +348,7 @@ def _handle_zbb_auto(chat_id, user_id):
         zalo.send_text(chat_id, "Mình cần biết *thu nhập hàng tháng* để phân bổ từ số 0.\n"
                                 "Gõ: \"thu nhập hàng tháng 20tr\".")
         return
+    db.clear_budgets(user_id)  # rebuild from zero
     alloc, running = {}, 0
     for cat, frac in ZBB_TEMPLATE:
         amt = round(income * frac / 1000) * 1000
@@ -398,7 +460,7 @@ def _handle_view_budgets(chat_id, user_id):
         return
     L = ["*Ngân sách tháng này:*"]
     for r in risks:
-        lab = CATEGORY_LABELS.get(r["category"], r["category"])
+        lab = _disp_label(r["category"], r.get("label"))
         flag = "🔴" if r["usage"] >= 1 else ("⚠️" if r["usage"] >= 0.9 else "✅")
         L.append(f"{flag} {lab}: {fmt_vnd(r['spent'])}/{fmt_vnd(r['budget'])} ({int(r['usage']*100)}%) · dự báo {fmt_vnd(r['projected'])}")
     zalo.send_text(chat_id, "\n".join(L))
@@ -525,6 +587,8 @@ def process_text(chat_id, text):
             return _handle_zbb_status(chat_id, user_id)
         if fast == "zbb_auto":
             return _handle_zbb_auto(chat_id, user_id)
+        if fast == "allocate":
+            return _handle_allocate(chat_id, user_id, text)
         if fast == "view_budgets":
             return _handle_view_budgets(chat_id, user_id)
         if fast == "view_goals":

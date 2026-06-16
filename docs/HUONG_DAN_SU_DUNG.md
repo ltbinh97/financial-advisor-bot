@@ -103,6 +103,10 @@ Triết lý ZBB: **mỗi đồng thu nhập đều có nhiệm vụ** — phân 
 2. `phân bổ tự động` — bot lập sẵn ngân sách khớp 100% thu nhập (nhà ở, ăn uống, đi lại, tiện ích, mua sắm, giải trí, sức khỏe, giáo dục, **tiết kiệm 20%**). Bạn chỉnh từng nhóm bằng `ngân sách <nhóm> <số>`.
 3. `ngân sách zbb` — xem trạng thái: thu nhập, đã phân bổ từng nhóm, và **số chưa phân bổ** (mục tiêu = 0đ).
 
+**Tự liệt kê khoản (linh hoạt):** nhắn nguyên câu, vd
+*"phân bổ: tiền nhà 5tr, ăn uống 4tr, tiền sữa 1tr, điện nước 800k, du lịch 2tr, còn lại để tiết kiệm/mua vàng"*.
+Bot tạo từng khoản theo đúng tên bạn đặt và **tự dồn phần còn lại** vào khoản tiết kiệm/vàng → tổng khớp 100% thu nhập.
+
 Mỗi khi đặt ngân sách, bot nhắc luôn *"chưa phân bổ còn bao nhiêu"* để bạn đưa về 0. Nếu tổng vượt thu nhập, bot cảnh báo 🔴.
 
 ---
