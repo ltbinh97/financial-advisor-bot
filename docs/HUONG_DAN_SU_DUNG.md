@@ -9,7 +9,7 @@ Trợ lý giúp bạn **ghi chép thu chi, lập ngân sách, đặt mục tiêu
 ## 🚀 Bắt đầu nhanh (người dùng mới)
 
 1. **Mở Zalo** và vào cuộc trò chuyện với bot (vd *Bot Dreamland*).
-2. Gõ **`help`** (hoặc `menu`, `bắt đầu`) để xem nhanh bot làm được gì.
+2. Gõ **`help`** (hoặc `menu`) → bot hiện **MENU đánh số**; chỉ cần gõ **một con số (1–8)** để chọn nhanh (số dư, báo cáo, ngân sách, mục tiêu, ZBB…). *(Zalo Bot chưa hỗ trợ nút bấm thật, nên dùng menu số là cách nhanh nhất.)*
 3. Làm theo 5 bước onboarding dưới đây — chỉ mất ~2 phút.
 
 ### 5 bước thiết lập lần đầu

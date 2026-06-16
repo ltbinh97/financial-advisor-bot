@@ -65,6 +65,39 @@ HELP_TEXT = (
 )
 
 
+# Friendly numbered menu (Zalo Bot API has no real buttons — user taps by typing a number).
+MENU_TEXT = (
+    "📋 *MENU* — gõ *số (1–8)* để chọn, hoặc nhắn lệnh bất kỳ:\n\n"
+    "1️⃣  Số dư hiện tại\n"
+    "2️⃣  Báo cáo tháng này\n"
+    "3️⃣  Ngân sách của tôi\n"
+    "4️⃣  Mục tiêu của tôi\n"
+    "5️⃣  Ngân sách từ số 0 (ZBB)\n"
+    "6️⃣  Hóa đơn định kỳ\n"
+    "7️⃣  Dự báo chi tháng\n"
+    "8️⃣  Cách ghi giao dịch & tính năng đầy đủ\n\n"
+    "💡 Hoặc nhắn tự nhiên: \"ăn trưa 50k\", \"lương 20tr\", \"ngân sách ăn uống 3tr\", "
+    "\"tôi còn bao nhiêu tiền\"…"
+)
+
+# Number -> fast-intent action.
+MENU_MAP = {
+    "1": "balance", "2": "report_month", "3": "view_budgets", "4": "view_goals",
+    "5": "zbb", "6": "recurring", "7": "forecast", "8": "help_full",
+}
+_KEYCAP = {f"{d}️⃣": str(d) for d in range(1, 9)}  # 1️⃣..8️⃣ -> "1".."8"
+
+
+def _menu_pick(text):
+    """Map a lone menu number (or its keycap emoji) to a menu action key."""
+    t = _norm(text)
+    if t in _KEYCAP:
+        return _KEYCAP[t]
+    if t in MENU_MAP:
+        return t
+    return None
+
+
 # --- Intent routing -------------------------------------------------------
 
 def _norm(t: str) -> str:
@@ -74,7 +107,9 @@ def _norm(t: str) -> str:
 def _fast_intent(text: str):
     t = _norm(text)
     if t in ("help", "menu", "/help", "/start", "start", "trợ giúp", "tro giup", "hướng dẫn", "huong dan", "bắt đầu"):
-        return "help"
+        return "menu"
+    if t in ("tính năng", "tinh nang", "đầy đủ", "tất cả lệnh", "all", "help full"):
+        return "help_full"
     # Undo / delete a transaction — checked before "recent" to avoid the
     # "giao dịch gần" overlap in "xóa giao dịch gần nhất".
     if ("hoàn tác" in t or "undo" in t or
@@ -473,10 +508,14 @@ def process_text(chat_id, text):
     try:
         welcomed = _welcome_if_new(chat_id, user_id)
         # If their very first message is just a greeting/help, the welcome covers it.
-        if welcomed and (_norm(text) in GREETINGS or _fast_intent(text) == "help"):
+        if welcomed and (_norm(text) in GREETINGS or _fast_intent(text) == "menu"):
             return
-        fast = _fast_intent(text)
-        if fast == "help":
+        # A lone number (1-8) is a menu pick; otherwise fall back to intent routing.
+        pick = _menu_pick(text)
+        fast = MENU_MAP.get(pick) if pick else _fast_intent(text)
+        if fast == "menu":
+            return zalo.send_text(chat_id, MENU_TEXT)
+        if fast == "help_full":
             return zalo.send_text(chat_id, HELP_TEXT)
         if fast == "report":
             return zalo.send_text(chat_id, reports.build_report(user_id, 7))

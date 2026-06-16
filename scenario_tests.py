@@ -179,7 +179,7 @@ run(u, "ngân sách ăn uống 2tr"); run(u, "ăn trưa 100k")
 check("I1 view_budgets", "Ngân sách" in joined(run(u, "ngân sách của tôi")), "")
 check("I2 forecast", "Dự báo" in joined(run(u, "dự báo")), "")
 check("I3 recent", "gần nhất" in joined(run(u, "lịch sử")).lower() or "giao dịch" in joined(run(u, "lịch sử")).lower(), "")
-check("I4 help", "trợ lý" in joined(run(u, "help")).lower(), "")
+check("I4 help shows numbered MENU", "menu" in joined(run(u, "help")).lower(), "")
 
 # ============================================================ J. ROUTING / EDGE (handler-level)
 def hres(payload):
@@ -319,6 +319,19 @@ db.set_budget(u2, "an_uong", 5000000)  # total 13M > 10M income
 r = run(u2, "ngân sách zbb")
 check("Q5 over-allocation flagged", "vượt phân bổ" in joined(r).lower(), joined(r)[:120])
 check("Q6 routes: 'phân bổ tự động' -> zbb_auto", main._fast_intent("phân bổ tự động") == "zbb_auto", "")
+
+# ============================================================ R. MENU (numbered)
+u = newuser()
+check("R1 help -> numbered menu", "gõ" in joined(run(u, "help")).lower() and "1️⃣" in joined(run(u, "help")), "")
+check("R2 _menu_pick number", main._menu_pick("1") == "1", "")
+check("R3 _menu_pick keycap emoji", main._menu_pick("1️⃣") == "1", "")
+# number routes to action: '1' -> balance (empty user -> friendly msg)
+r = run(u, "1")
+check("R4 '1' routes to balance", "số dư" in joined(r).lower() or "chưa ghi" in joined(r).lower(), joined(r)[:80])
+# '8' -> full feature help
+r = run(u, "8")
+check("R5 '8' -> full feature list", "ghi giao dịch" in joined(r).lower() or "trợ lý" in joined(r).lower(), joined(r)[:80])
+check("R6 non-menu text not hijacked", main._menu_pick("ăn trưa 50k") is None, "")
 
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
