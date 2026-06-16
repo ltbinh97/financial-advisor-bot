@@ -299,6 +299,27 @@ check("P4 classify routes to savings_plan",
       classify("tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào")["intent"] == "savings_plan",
       str(classify("tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào")))
 
+# ============================================================ Q. ZERO-BASED BUDGETING
+u = newuser()
+# No income yet -> ZBB prompts to declare income
+r = run(u, "ngân sách zbb")
+check("Q1 ZBB without income asks to declare", "thu nhập" in joined(r).lower(), joined(r)[:80])
+db.set_monthly_income(u, 20000000)
+SENT.clear(); main._handle_zbb_auto(u, u)
+allocated = sum(float(b["amount"]) for b in db.get_budgets(u))
+check("Q2 auto-allocate sums EXACTLY to income (unallocated=0)", allocated == 20000000, f"allocated={allocated}")
+check("Q3 savings bucket allocated", db.get_budget(u, "tiet_kiem_dau_tu") is not None, "")
+r = run(u, "ngân sách zbb")
+check("Q4 status shows balanced (0đ chưa phân bổ)", "Chưa phân bổ: 0đ" in joined(r) or "đã cân bằng" in joined(r).lower(), joined(r)[:120])
+# Over-allocation detection
+u2 = newuser()
+db.set_monthly_income(u2, 10000000)
+db.set_budget(u2, "nha_o", 8000000)
+db.set_budget(u2, "an_uong", 5000000)  # total 13M > 10M income
+r = run(u2, "ngân sách zbb")
+check("Q5 over-allocation flagged", "vượt phân bổ" in joined(r).lower(), joined(r)[:120])
+check("Q6 routes: 'phân bổ tự động' -> zbb_auto", main._fast_intent("phân bổ tự động") == "zbb_auto", "")
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)

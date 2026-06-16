@@ -95,6 +95,16 @@ Bot **không spam**: mỗi mốc chỉ nhắc lại sau ít nhất 12 giờ. Ngo
 
 **Xem tình trạng ngân sách:** `ngân sách của tôi`
 
+### 🧮 Ngân sách từ số 0 (Zero-Based Budgeting)
+
+Triết lý ZBB: **mỗi đồng thu nhập đều có nhiệm vụ** — phân bổ hết thu nhập vào các nhóm chi + tiết kiệm cho tới khi *"chưa phân bổ" = 0*.
+
+1. Khai báo thu nhập: `thu nhập hàng tháng 20tr`
+2. `phân bổ tự động` — bot lập sẵn ngân sách khớp 100% thu nhập (nhà ở, ăn uống, đi lại, tiện ích, mua sắm, giải trí, sức khỏe, giáo dục, **tiết kiệm 20%**). Bạn chỉnh từng nhóm bằng `ngân sách <nhóm> <số>`.
+3. `ngân sách zbb` — xem trạng thái: thu nhập, đã phân bổ từng nhóm, và **số chưa phân bổ** (mục tiêu = 0đ).
+
+Mỗi khi đặt ngân sách, bot nhắc luôn *"chưa phân bổ còn bao nhiêu"* để bạn đưa về 0. Nếu tổng vượt thu nhập, bot cảnh báo 🔴.
+
 ---
 
 ## 🐖 Mục tiêu tiết kiệm
