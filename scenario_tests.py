@@ -277,6 +277,28 @@ u2 = newuser()
 r = run(u2, "số dư")
 check("O4 no-tx -> 0đ friendly msg", "chưa ghi" in joined(r).lower() or "0đ" in joined(r), joined(r)[:80])
 
+# ============================================================ P. SAVINGS PLAN
+u = newuser()
+db.set_monthly_income(u, 25000000)  # no expenses -> savings = 25M/month
+SENT.clear(); main._handle_savings_plan(u, u, 2000000000, "mua nhà")
+msg = joined([b.get("text", "") for m, b in SENT if m == "sendMessage"])
+check("P1 time-to-goal computed (2 tỷ @25M/th = 6y8m)",
+      "2.000.000.000đ" in msg and "6 năm 8 tháng" in msg, msg[:160])
+check("P1b shows monthly savings", "Để dành" in msg, "")
+u2 = newuser()
+SENT.clear(); main._handle_savings_plan(u2, u2, 1000000000)
+check("P2 no income -> asks to declare income",
+      "thu nhập" in joined([b.get("text", "") for m, b in SENT if m == "sendMessage"]).lower(), "")
+u3 = newuser()
+db.set_monthly_income(u3, 5000000)
+db.add_transaction(u3, 9000000, "expense", category="khac", source="seed")
+SENT.clear(); main._handle_savings_plan(u3, u3, 500000000)
+check("P3 expense>=income -> warning + required monthly",
+      "chi ≥ thu" in joined([b.get("text", "") for m, b in SENT if m == "sendMessage"]).lower(), "")
+check("P4 classify routes to savings_plan",
+      classify("tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào")["intent"] == "savings_plan",
+      str(classify("tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào")))
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)

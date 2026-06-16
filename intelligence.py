@@ -99,6 +99,20 @@ def forecast_month_expense(user_id: str) -> dict:
     }
 
 
+def estimate_monthly_cashflow(user_id: str) -> dict:
+    """Estimate monthly income, expense and savings from the user's data.
+    Income: declared monthly_income if set, else this month's income.
+    Expense: projected month spend (run-rate), else this month's expense."""
+    start, _, _ = _month_bounds()
+    st = db.get_settings(user_id)
+    declared = float(st["monthly_income"]) if st and st.get("monthly_income") else 0.0
+    month_income = db.total_amount(user_id, start, "income")
+    income = declared or month_income
+    fc = forecast_month_expense(user_id)
+    expense = fc["projected_month"] or db.total_amount(user_id, start, "expense")
+    return {"income": round(income), "expense": round(expense), "savings": round(income - expense)}
+
+
 def overspend_risk(user_id: str) -> list:
     """Per-category budget usage + projection for the current month."""
     start, now, days_in_month = _month_bounds()

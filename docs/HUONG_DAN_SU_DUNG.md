@@ -105,6 +105,8 @@ tiết kiệm cho mua xe 5tr      → bỏ thêm tiền vào mục tiêu
 mục tiêu của tôi              → xem tiến độ (vd 10%)
 ```
 
+**Lộ trình đạt mục tiêu:** hỏi *"tôi muốn có 2 tỷ để mua nhà, bao lâu thì đạt?"* — bot dựa trên thu/chi hàng tháng của bạn để tính **còn bao nhiêu năm/tháng/ngày**, và mức cần để dành mỗi tháng nếu muốn đạt sớm hơn (3/5/10 năm).
+
 ---
 
 ## 📊 Báo cáo & tra cứu

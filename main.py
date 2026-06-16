@@ -53,6 +53,7 @@ HELP_TEXT = (
     "• *Dán CSV* (date,amount,type,merchant) để nhập hàng loạt\n"
     "• *Ngân sách*: \"ngân sách ăn uống 3tr\"\n"
     "• *Mục tiêu*: \"mục tiêu mua xe 50tr\"\n"
+    "• *Lộ trình tiết kiệm*: \"tôi muốn có 2 tỷ để mua nhà, bao lâu thì đạt?\"\n"
     "• *Thu nhập*: \"thu nhập hàng tháng 20tr\"\n"
     "• *Báo cáo*: \"báo cáo\" — xem tổng kết + dự báo\n"
     "• *Số dư*: \"tôi còn bao nhiêu tiền\" / \"số dư\" — thu trừ chi\n"
@@ -104,7 +105,7 @@ _CLASSIFY_SYS = (
     "Quy ước tiền: k=*1.000, tr/triệu=*1.000.000, 2tr5=2.500.000, tỷ=*1e9. "
     "Mã danh mục hợp lệ: " + ", ".join(CATEGORIES) + ". "
     "Trả JSON: {\"intent\": one of "
-    "[set_budget,set_goal,set_income,add_to_goal,transaction,question], "
+    "[set_budget,set_goal,set_income,add_to_goal,transaction,savings_plan,question], "
     "\"amount\": number|null, \"category\": string|null, \"goal_name\": string|null, "
     "\"type\": \"income|expense|null\", \"merchant\": string|null}. "
     "set_budget: đặt hạn mức chi cho 1 danh mục. set_goal: tạo mục tiêu tiết kiệm. "
@@ -121,7 +122,12 @@ _CLASSIFY_SYS = (
     "add_to_goal khi bỏ/góp/tiết kiệm tiền CHO một mục tiêu đã có. "
     "'tiết kiệm cho mua xe 5tr' -> {\"intent\":\"add_to_goal\",\"goal_name\":\"mua xe\",\"amount\":5000000}. "
     "'bỏ ống 2tr cho quỹ du lịch' -> {\"intent\":\"add_to_goal\",\"goal_name\":\"du lịch\",\"amount\":2000000}. "
-    "'mục tiêu mua nhà 1 tỷ' -> {\"intent\":\"set_goal\",\"goal_name\":\"mua nhà\",\"amount\":1000000000}."
+    "'mục tiêu mua nhà 1 tỷ' -> {\"intent\":\"set_goal\",\"goal_name\":\"mua nhà\",\"amount\":1000000000}.\n"
+    "savings_plan khi hỏi CẦN BAO LÂU / NÊN TIẾT KIỆM THẾ NÀO để đạt một số tiền (xin lộ trình, "
+    "chưa yêu cầu tạo mục tiêu). amount = số tiền mục tiêu. "
+    "'tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào' -> "
+    "{\"intent\":\"savings_plan\",\"amount\":2000000000,\"goal_name\":\"mua nhà\"}. "
+    "'bao lâu để có 500 triệu' -> {\"intent\":\"savings_plan\",\"amount\":500000000}."
 )
 
 
@@ -184,6 +190,63 @@ def _handle_set_goal(chat_id, user_id, fields):
     g = db.add_goal(user_id, name, float(amount))
     zalo.send_text(chat_id, f"🎯 Đã tạo mục tiêu *{g['name']}*: {fmt_vnd(amount)}.\n"
                             f"Bỏ tiền vào bằng: \"tiết kiệm cho {name} 1tr\".")
+
+
+def _fmt_int(n):
+    return f"{int(round(n)):,}".replace(",", ".")
+
+
+def _handle_savings_plan(chat_id, user_id, target, goal_name=None):
+    if not target or float(target) <= 0:
+        zalo.send_text(chat_id, "Bạn cho mình biết số tiền mục tiêu nhé, vd: "
+                                "\"tôi muốn có 2 tỷ để mua nhà, nên tiết kiệm thế nào?\".")
+        return
+    target = float(target)
+    cf = intel.estimate_monthly_cashflow(user_id)
+    income, expense, savings = cf["income"], cf["expense"], cf["savings"]
+
+    if income <= 0:
+        zalo.send_text(chat_id, "Mình chưa biết thu nhập của bạn nên chưa tính được lộ trình.\n"
+                                "Hãy khai báo: \"thu nhập hàng tháng 20tr\" và ghi vài khoản chi, "
+                                "rồi hỏi lại nhé.")
+        return
+
+    # Subtract any progress already saved toward a matching goal.
+    saved = 0.0
+    if goal_name:
+        for g in db.list_goals(user_id):
+            if goal_name.lower() in (g["name"] or "").lower():
+                saved = float(g["saved_amount"]); break
+    remaining = max(target - saved, 0)
+
+    L = [f"🎯 *Kế hoạch đạt {fmt_vnd(target)}*"
+         + (f" ({goal_name})" if goal_name else ""), ""]
+    L.append(f"• Thu ~{fmt_vnd(income)}/tháng · Chi ~{fmt_vnd(expense)}/tháng · "
+             f"Để dành ~{fmt_vnd(savings)}/tháng")
+    if saved > 0:
+        L.append(f"• Đã tích lũy {fmt_vnd(saved)} → còn cần {fmt_vnd(remaining)}")
+
+    if savings <= 0:
+        L.append("\n⚠️ Hiện *chi ≥ thu* nên chưa tích lũy được. Cần tăng thu nhập hoặc giảm chi.")
+        L.append("Nếu muốn đạt mục tiêu, cần để dành mỗi tháng:")
+        for yrs in (5, 10, 15):
+            L.append(f"  • Trong {yrs} năm → {fmt_vnd(remaining / (yrs * 12))}/tháng")
+    else:
+        months = remaining / savings
+        yrs, mo = int(months // 12), int(round(months % 12))
+        days = int(round(months * 30.44))
+        L.append(f"\n⏳ Với nhịp hiện tại: ~*{yrs} năm {mo} tháng* "
+                 f"(~{_fmt_int(months)} tháng · ~{_fmt_int(days)} ngày)")
+        L.append("\nMuốn nhanh hơn — mức để dành cần thiết:")
+        for yrs2 in (3, 5, 10):
+            L.append(f"  • Đạt trong {yrs2} năm → {fmt_vnd(remaining / (yrs2 * 12))}/tháng")
+
+    L.append("\n" + render(explanation(
+        why="Thời gian = số tiền còn cần ÷ mức để dành mỗi tháng (thu − chi).",
+        evidence=[f"Thu ~{fmt_vnd(income)}", f"Chi ~{fmt_vnd(expense)}", f"Để dành ~{fmt_vnd(savings)}/tháng"],
+        impact="Mỗi đồng giảm chi/tăng thu đều rút ngắn thời gian đạt mục tiêu.")))
+    L.append("\n_Gõ \"mục tiêu " + (goal_name or "của tôi") + f" {_fmt_int(target)}\" để mình theo dõi tiến độ._")
+    zalo.send_text(chat_id, "\n".join(L))
 
 
 def _handle_set_income(chat_id, user_id, fields):
@@ -372,6 +435,8 @@ def process_text(chat_id, text):
             return _handle_set_income(chat_id, user_id, fields)
         if intent == "add_to_goal":
             return _handle_add_to_goal(chat_id, user_id, fields)
+        if intent == "savings_plan":
+            return _handle_savings_plan(chat_id, user_id, fields.get("amount"), fields.get("goal_name"))
         if intent == "transaction" and fields.get("amount"):
             draft = {"amount": float(fields["amount"]),
                      "type": fields.get("type") if fields.get("type") in ("income", "expense") else "expense",
