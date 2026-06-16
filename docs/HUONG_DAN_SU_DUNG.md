@@ -113,6 +113,7 @@ mục tiêu của tôi              → xem tiến độ (vd 10%)
 |----|---------|
 | `báo cáo` | Tổng kết **7 ngày** gần nhất |
 | `báo cáo tháng này` | Tổng kết **từ đầu tháng**: thu/chi/ròng, top chi tiêu, ngân sách, mục tiêu, dự báo + nhận định |
+| `tôi còn bao nhiêu tiền` / `số dư` | Số dư hiện tại = tổng thu − tổng chi (đã ghi) |
 | `dự báo` | Dự báo tổng chi cả tháng theo nhịp hiện tại |
 | `hóa đơn định kỳ` | Các khoản lặp lại hàng tháng bot phát hiện |
 | `lịch sử` | 10 giao dịch gần nhất |
@@ -162,6 +163,7 @@ báo cáo / báo cáo tháng này  → xem báo cáo
 ngân sách của tôi            → xem ngân sách
 mục tiêu của tôi             → xem mục tiêu
 hóa đơn định kỳ / dự báo     → phân tích
+tôi còn bao nhiêu tiền       → số dư (thu − chi); hoặc: số dư
 lịch sử                      → giao dịch gần đây
 xóa giao dịch gần nhất       → xóa khoản vừa ghi (hoặc: hủy giao dịch / hoàn tác)
 ```

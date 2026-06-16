@@ -55,6 +55,7 @@ HELP_TEXT = (
     "• *Mục tiêu*: \"mục tiêu mua xe 50tr\"\n"
     "• *Thu nhập*: \"thu nhập hàng tháng 20tr\"\n"
     "• *Báo cáo*: \"báo cáo\" — xem tổng kết + dự báo\n"
+    "• *Số dư*: \"tôi còn bao nhiêu tiền\" / \"số dư\" — thu trừ chi\n"
     "• *Xem*: \"ngân sách của tôi\", \"mục tiêu của tôi\", \"hóa đơn định kỳ\", \"dự báo\"\n"
     "• *Xóa nhầm*: \"xóa giao dịch gần nhất\" / \"hủy giao dịch\"\n"
     "• Hoặc hỏi bất kỳ điều gì về tài chính cá nhân.\n\n"
@@ -87,6 +88,10 @@ def _fast_intent(text: str):
         return "view_goals"
     if any(k in t for k in ("hóa đơn định kỳ", "hoa don dinh ky", "recurring", "định kỳ")):
         return "recurring"
+    if any(k in t for k in ("số dư", "so du", "balance", "còn bao nhiêu tiền",
+                            "con bao nhieu tien", "nhiêu tiền", "tiền còn lại", "tien con lai",
+                            "còn lại bao nhiêu", "con lai bao nhieu", "còn bao nhiêu", "con bao nhieu")):
+        return "balance"
     if any(k in t for k in ("dự báo", "du bao", "forecast")):
         return "forecast"
     if any(k in t for k in ("lịch sử", "lich su", "giao dịch gần", "gần đây", "gan day")):
@@ -241,6 +246,22 @@ def _handle_recurring(chat_id, user_id):
     zalo.send_text(chat_id, "\n".join(L))
 
 
+def _handle_balance(chat_id, user_id):
+    b = db.net_balance(user_id)
+    if b["income"] == 0 and b["expense"] == 0:
+        zalo.send_text(chat_id, "Bạn chưa ghi giao dịch nào nên số dư đang là 0đ.\n"
+                                "Thử ghi: \"lương 20tr\" hoặc \"ăn trưa 50k\".")
+        return
+    bal = b["balance"]
+    emoji = "💰" if bal >= 0 else "🔴"
+    expl = explanation(
+        why="Số dư = tổng thu đã ghi − tổng chi đã ghi.",
+        evidence=[f"Tổng thu: {fmt_vnd(b['income'])}", f"Tổng chi: {fmt_vnd(b['expense'])}"],
+        impact=("Bạn đang chi nhiều hơn thu — cân nhắc cắt giảm chi tiêu."
+                if bal < 0 else "Khoản dư này có thể đưa vào tiết kiệm hoặc mục tiêu."))
+    zalo.send_text(chat_id, f"{emoji} *Số dư hiện tại: {fmt_vnd(bal)}*\n{render(expl)}")
+
+
 def _handle_forecast(chat_id, user_id):
     fc = intel.forecast_month_expense(user_id)
     expl = explanation(
@@ -319,6 +340,8 @@ def process_text(chat_id, text):
             return _handle_view_goals(chat_id, user_id)
         if fast == "recurring":
             return _handle_recurring(chat_id, user_id)
+        if fast == "balance":
+            return _handle_balance(chat_id, user_id)
         if fast == "forecast":
             return _handle_forecast(chat_id, user_id)
         if fast == "recent":

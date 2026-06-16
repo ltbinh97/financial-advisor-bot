@@ -209,6 +209,19 @@ def category_totals(user_id, since, ttype="expense"):
     return rows or []
 
 
+def net_balance(user_id):
+    """All-time balance from recorded transactions: SUM(income) - SUM(expense)."""
+    row = _q(
+        """SELECT
+             COALESCE(SUM(amount) FILTER (WHERE type='income'), 0)  AS income,
+             COALESCE(SUM(amount) FILTER (WHERE type='expense'), 0) AS expense
+           FROM transactions WHERE user_id=%s""",
+        (user_id,), fetch="one")
+    inc = float(row["income"]) if row else 0.0
+    exp = float(row["expense"]) if row else 0.0
+    return {"income": inc, "expense": exp, "balance": inc - exp}
+
+
 def total_amount(user_id, since, ttype):
     row = _q(
         "SELECT COALESCE(SUM(amount),0) AS total FROM transactions WHERE user_id=%s AND type=%s AND ts>=%s",

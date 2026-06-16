@@ -263,6 +263,20 @@ check("N3 new user + transaction: welcomed AND recorded",
       "Chào mừng" in joined(r3) and any(float(t["amount"]) == 50000 for t in txs(u3)),
       joined(r3)[:60])
 
+# ============================================================ O. BALANCE
+u = newuser()
+db.add_transaction(u, 20000000, "income", category="thu_nhap", source="seed")
+db.add_transaction(u, 50000, "expense", category="an_uong", source="seed")
+r = run(u, "tôi còn bao nhiêu tiền")
+check("O1 balance = income - expense (19.950.000)",
+      "19.950.000" in joined(r) and "số dư" in joined(r).lower(), joined(r)[:120])
+check("O2 'tôi còn bao nhiêu tiền' routes to balance",
+      main._fast_intent("tôi còn bao nhiêu tiền") == "balance", str(main._fast_intent("tôi còn bao nhiêu tiền")))
+check("O3 'số dư' routes to balance", main._fast_intent("số dư") == "balance", "")
+u2 = newuser()
+r = run(u2, "số dư")
+check("O4 no-tx -> 0đ friendly msg", "chưa ghi" in joined(r).lower() or "0đ" in joined(r), joined(r)[:80])
+
 # ============================================================ SUMMARY
 print("\n================ RESULTS ================")
 passed = sum(1 for _, ok, _ in RESULTS if ok)
