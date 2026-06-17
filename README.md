@@ -12,13 +12,15 @@ và báo cáo định kỳ — mọi khuyến nghị đều kèm *vì sao / dự
 
 ## Mô tả Agent (Agent description)
 
-**Bài toán.** Phần lớn người Việt không ghi chép chi tiêu vì các app tài chính rườm rà, nhiều bước nhập liệu. Họ không biết tiền đi đâu, dễ vượt ngân sách và khó đạt mục tiêu tiết kiệm.
+Phần lớn người Việt ngại ghi chép chi tiêu: app tài chính nhiều bước, rườm rà, dùng vài hôm là bỏ. Hệ quả là không biết tiền đi đâu, dễ vượt ngân sách và khó đạt mục tiêu tiết kiệm.
 
-**Người dùng.** Cá nhân/hộ gia đình muốn quản lý tiền ngay trên **Zalo** — kênh nhắn tin quen thuộc — mà không cần cài app hay dùng bảng tính.
+Trợ lý Tài chính Cá nhân giải bài toán đó bằng cách đưa việc quản lý tiền về đúng nơi người dùng đã ở sẵn mỗi ngày — **Zalo**. Không cần cài app, không cần bảng tính, chỉ cần nhắn tin như đang trò chuyện.
 
-**Giá trị.** Bot biến việc quản lý tài chính thành **trò chuyện tự nhiên**: gõ "ăn trưa 50k" / "lương 20tr", **gửi ảnh hóa đơn (OCR)**, dán **SMS ngân hàng** hoặc **CSV** → tự phân loại, tính **số dư**, **báo cáo**, **dự báo**. Bot **cảnh báo vượt ngân sách đa tầng (70/90/100%)**, đặt **mục tiêu tiết kiệm** và tính **lộ trình đạt mục tiêu** (bao nhiêu năm/tháng), hỗ trợ **Zero-Based Budgeting** (phân bổ trọn thu nhập, phần dư dồn tiết kiệm). Mọi khuyến nghị đều kèm **vì sao · dựa trên dữ liệu nào · ảnh hưởng gì** để người dùng tin tưởng và ra quyết định tốt hơn.
+Bạn gõ "ăn trưa 50k" hay "lương 20tr", gửi **ảnh hóa đơn** để bot tự đọc (OCR), dán **tin nhắn ngân hàng** hoặc **file CSV** — bot tự phân loại, tính **số dư**, lập **báo cáo** và **dự báo** chi tiêu. Khi sắp vượt ngân sách, bot **cảnh báo nhiều mức (70/90/100%)**; bạn đặt **mục tiêu tiết kiệm** và bot tính ngay **bao lâu thì đạt được**. Với **Zero-Based Budgeting**, mọi đồng thu nhập đều được giao nhiệm vụ, phần dư tự dồn vào tiết kiệm. Đặc biệt, mọi cảnh báo và gợi ý đều kèm **vì sao – dựa trên dữ liệu nào – ảnh hưởng ra sao**, giúp người dùng tin tưởng và ra quyết định tốt hơn.
 
-> **EN — Problem:** Most people skip expense tracking because finance apps are tedious. **Users:** individuals/households who want to manage money inside **Zalo**, no app or spreadsheet. **Value:** finance management as natural chat — log via text, **receipt OCR**, bank SMS or CSV; auto-categorize, balance, reports, forecasts; **multi-tier budget alerts (70/90/100%)**; savings goals with **time-to-goal projection**; **Zero-Based Budgeting**. Every recommendation carries **why · evidence · impact**.
+**Hướng phát triển:** tích hợp trực tiếp với **ứng dụng ngân hàng** để giao dịch tự động đồng bộ về bot — người dùng không còn phải nhập tay, chỉ việc theo dõi và nhận tư vấn.
+
+> **EN.** Most Vietnamese skip expense tracking — finance apps are tedious and quickly abandoned, leaving people unsure where money goes, prone to overspending, and far from their savings goals. This assistant brings money management to where users already are every day — **Zalo** — with no app or spreadsheet, just natural chat. Type "lunch 50k" or "salary 20m", send a **receipt photo** for OCR, or paste a **bank SMS / CSV**: the bot auto-categorizes, tracks **balance**, builds **reports** and **forecasts**, raises **multi-tier budget alerts (70/90/100%)**, sets **savings goals** with **time-to-goal projection**, and supports **Zero-Based Budgeting** (every dong gets a job; the remainder flows to savings). Every alert and tip carries **why · evidence · impact**. **Roadmap:** direct **bank-app integration** so transactions sync automatically — no manual entry, just tracking and advice.
 
 ## Kiến trúc 4 lớp
 
