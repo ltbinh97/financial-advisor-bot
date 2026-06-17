@@ -20,7 +20,15 @@ Bạn gõ "ăn trưa 50k" hay "lương 20tr", gửi **ảnh hóa đơn** để b
 
 **Hướng phát triển:** tích hợp trực tiếp với **ứng dụng ngân hàng** để giao dịch tự động đồng bộ về bot — người dùng không còn phải nhập tay, chỉ việc theo dõi và nhận tư vấn.
 
-> **EN.** Most Vietnamese skip expense tracking — finance apps are tedious and quickly abandoned, leaving people unsure where money goes, prone to overspending, and far from their savings goals. This assistant brings money management to where users already are every day — **Zalo** — with no app or spreadsheet, just natural chat. Type "lunch 50k" or "salary 20m", send a **receipt photo** for OCR, or paste a **bank SMS / CSV**: the bot auto-categorizes, tracks **balance**, builds **reports** and **forecasts**, raises **multi-tier budget alerts (70/90/100%)**, sets **savings goals** with **time-to-goal projection**, and supports **Zero-Based Budgeting** (every dong gets a job; the remainder flows to savings). Every alert and tip carries **why · evidence · impact**. **Roadmap:** direct **bank-app integration** so transactions sync automatically — no manual entry, just tracking and advice.
+### English
+
+Most Vietnamese avoid tracking their spending: finance apps are clunky, full of input steps, and abandoned within days. The result — not knowing where money goes, overspending, and never quite reaching savings goals.
+
+The Personal Finance Assistant solves this by bringing money management to where people already are every day — **Zalo**. No app to install, no spreadsheets — you just chat.
+
+Type "lunch 50k" or "salary 20m", send a **photo of a receipt** for the bot to read (OCR), or paste a **bank SMS** or **CSV file** — the bot auto-categorizes, tracks your **balance**, and builds **reports** and spending **forecasts**. When you're about to exceed a budget, it sends **multi-tier alerts (70/90/100%)**; set a **savings goal** and it instantly tells you **how long until you reach it**. With **Zero-Based Budgeting**, every dong is given a job and the remainder flows automatically into savings. Crucially, every alert and suggestion comes with **why – based on what data – and what impact**, so users can trust it and make better decisions.
+
+**Roadmap:** direct integration with **banking apps** so transactions sync automatically — no more manual entry, just effortless tracking and advice.
 
 ## Kiến trúc 4 lớp
 
